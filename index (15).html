@@ -1,0 +1,948 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#FFFFFF">
+<title>MineChain</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/6.7.1/ethers.umd.min.js"></script>
+<style>
+:root{
+  --bg:       #F5F6FA;
+  --bg2:      #FFFFFF;
+  --bg3:      #F0F1F5;
+  --card:     #FFFFFF;
+  --border:   #E8E9EF;
+  --border2:  #D8DAE5;
+  --t1:       #0D0E14;
+  --t2:       #6B7080;
+  --t3:       #A8ABBE;
+  --teal:     #00B897;
+  --teal-bg:  #E6F7F4;
+  --teal-mid: rgba(0,184,151,.15);
+  --blue:     #1677FF;
+  --blue-bg:  #EAF2FF;
+  --gold:     #F0A500;
+  --gold-bg:  #FFF8E6;
+  --purple:   #7B5EEA;
+  --purple-bg:#F0ECFF;
+  --red:      #F53D3D;
+  --red-bg:   #FFF0F0;
+  --c-iron:   #6B7080;
+  --c-silver: #1677FF;
+  --c-gold:   #F0A500;
+  --c-diamond:#7B5EEA;
+  --r:        16px;
+  --r-sm:     10px;
+  --r-xs:     8px;
+  --sat:      env(safe-area-inset-top,0px);
+  --sab:      env(safe-area-inset-bottom,0px);
+  --shadow:   0 1px 4px rgba(0,0,0,.06),0 4px 16px rgba(0,0,0,.04);
+  --shadow-md:0 2px 8px rgba(0,0,0,.08),0 8px 24px rgba(0,0,0,.06);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--t1);font-family:'Inter',sans-serif;overflow:hidden;-webkit-font-smoothing:antialiased}
+button{border:none;cursor:pointer;font-family:'Inter',sans-serif}
+input{font-family:'Inter',sans-serif;outline:none;border:none}
+
+/* ─── 布局 ─── */
+#app{height:100%;max-width:480px;margin:0 auto;display:flex;flex-direction:column;position:relative;overflow:hidden;background:var(--bg)}
+.safe-top{height:calc(var(--sat)+4px);flex-shrink:0;background:var(--bg2)}
+
+/* ─── 顶栏 ─── */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:12px 20px 10px;flex-shrink:0;
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+}
+.logo{font-size:18px;font-weight:800;color:var(--t1);letter-spacing:-.4px}
+.logo span{color:var(--teal)}
+.wallet-chip{
+  display:flex;align-items:center;gap:6px;
+  background:var(--bg3);border:1px solid var(--border);
+  border-radius:40px;padding:7px 14px;
+  font-size:13px;font-weight:500;color:var(--t2);cursor:pointer;
+  transition:background .15s;
+}
+.wallet-chip:active{background:var(--border)}
+.wdot{width:6px;height:6px;border-radius:50%;background:var(--t3);flex-shrink:0;transition:background .3s}
+.wdot.on{background:var(--teal)}
+
+/* ─── 页面 ─── */
+.pages{flex:1;overflow:hidden;position:relative}
+.page{position:absolute;inset:0;overflow-y:auto;-webkit-overflow-scrolling:touch;opacity:0;pointer-events:none;transform:translateY(8px);transition:opacity .2s,transform .2s}
+.page.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.page::-webkit-scrollbar{display:none}
+.inner{padding:0 16px calc(var(--sab)+80px)}
+
+/* ─── 底部导航 ─── */
+.nav{flex-shrink:0;background:var(--bg2);border-top:1px solid var(--border);display:flex;padding-bottom:var(--sab)}
+.ni{flex:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:10px 0 8px;background:transparent;color:var(--t3);font-size:11px;font-weight:500;transition:color .18s}
+.ni.active{color:var(--teal)}
+.ni-icon svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+
+/* ─── 卡片 ─── */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.card-sm{padding:12px 14px}
+
+/* ─── 英雄卡 ─── */
+.hero{
+  background:var(--t1);
+  border-radius:var(--r);padding:22px 20px;
+  margin-bottom:14px;position:relative;overflow:hidden;
+}
+.hero-dot1{position:absolute;width:180px;height:180px;border-radius:50%;background:rgba(0,184,151,.12);top:-60px;right:-60px;pointer-events:none}
+.hero-dot2{position:absolute;width:120px;height:120px;border-radius:50%;background:rgba(22,119,255,.08);bottom:-40px;left:-20px;pointer-events:none}
+.hero-lbl{font-size:12px;color:rgba(255,255,255,.45);margin-bottom:8px;font-weight:500;letter-spacing:.04em;text-transform:uppercase}
+.hero-num{font-size:32px;font-weight:800;color:#fff;letter-spacing:-.5px;font-family:'JetBrains Mono',monospace}
+.hero-sub{font-size:13px;color:rgba(255,255,255,.4);margin-top:6px}
+.hero-sub b{color:rgba(255,255,255,.85);font-weight:600}
+
+/* ─── 段标题 ─── */
+.sec{font-size:14px;font-weight:700;color:var(--t1);margin:20px 0 10px;display:flex;align-items:center;justify-content:space-between}
+.sec-right{font-size:12px;color:var(--t2);font-weight:400}
+
+/* ─── 矿机卡 ─── */
+.mc{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--r);padding:16px;margin-bottom:10px;
+  cursor:pointer;transition:border-color .2s,box-shadow .2s;
+  box-shadow:var(--shadow);
+}
+.mc:active{box-shadow:none;border-color:var(--border2)}
+.mc.iron   {border-top:2px solid var(--c-iron)}
+.mc.silver {border-top:2px solid var(--c-silver)}
+.mc.golden {border-top:2px solid var(--c-gold)}
+.mc.diamond{border-top:2px solid var(--c-diamond)}
+
+.mc-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mc-left{display:flex;align-items:center;gap:12px}
+.mc-ico{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+.mc-name{font-size:15px;font-weight:700;color:var(--t1)}
+.mc-supply{font-size:12px;color:var(--t3);margin-top:2px}
+.mc-price-num{font-size:22px;font-weight:800;font-family:'JetBrains Mono',monospace;text-align:right}
+.mc-price-unit{font-size:11px;color:var(--t3);text-align:right;margin-top:1px}
+
+.mc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.mc-stat{background:var(--bg3);border-radius:var(--r-xs);padding:9px 10px}
+.mc-stat-l{font-size:11px;color:var(--t3);margin-bottom:4px}
+.mc-stat-v{font-size:13px;font-weight:700;color:var(--t1)}
+
+.mc-bar-wrap{display:flex;align-items:center;gap:8px}
+.mc-bar-track{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.mc-bar-fill{height:100%;border-radius:2px}
+.mc-bar-txt{font-size:11px;color:var(--t3);min-width:36px;text-align:right}
+
+/* ─── 标签 ─── */
+.tag{display:inline-flex;align-items:center;font-size:11px;font-weight:600;padding:2px 8px;border-radius:6px}
+.tag-hot{background:var(--gold-bg);color:var(--gold)}
+.tag-rare{background:var(--purple-bg);color:var(--purple)}
+
+/* ─── 按钮 ─── */
+.btn{width:100%;padding:14px;border-radius:var(--r-sm);font-size:15px;font-weight:700;font-family:'Inter',sans-serif;transition:opacity .15s,transform .1s;letter-spacing:.01em}
+.btn:active{transform:scale(.97);opacity:.8}
+.btn-primary{background:var(--teal);color:#fff}
+.btn-ghost{background:var(--bg3);color:var(--t1);border:1px solid var(--border)}
+.btn-sm{padding:9px 16px;font-size:13px;width:auto;border-radius:var(--r-xs)}
+.btn-outline{background:transparent;color:var(--teal);border:1px solid var(--teal);border-radius:var(--r-xs);padding:9px 16px;font-size:13px;width:auto;font-weight:600}
+
+/* ─── 数据行 ─── */
+.drow{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border)}
+.drow:last-child{border:none}
+.dl{font-size:13px;color:var(--t2)}
+.dv{font-size:13px;font-weight:600;color:var(--t1)}
+.dv.teal{color:var(--teal)}
+.dv.gold{color:var(--gold)}
+.dv.red{color:var(--red)}
+.dv.purple{color:var(--purple)}
+.dv.blue{color:var(--blue)}
+
+/* ─── 底部弹窗 ─── */
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;opacity:0;pointer-events:none;transition:opacity .22s}
+.overlay.show{opacity:1;pointer-events:all}
+.sheet{
+  position:absolute;bottom:0;left:50%;
+  transform:translateX(-50%) translateY(100%);
+  width:100%;max-width:480px;
+  background:var(--bg2);
+  border-radius:20px 20px 0 0;
+  padding:0 0 calc(var(--sab)+20px);
+  max-height:92vh;overflow-y:auto;
+  transition:transform .28s cubic-bezier(.32,1.2,.6,1);
+  box-shadow:0 -4px 40px rgba(0,0,0,.12);
+}
+.sheet::-webkit-scrollbar{display:none}
+.overlay.show .sheet{transform:translateX(-50%) translateY(0)}
+.sheet-handle{width:36px;height:4px;background:var(--border2);border-radius:2px;margin:12px auto 0}
+.sheet-head{padding:16px 20px 14px;border-bottom:1px solid var(--border)}
+.sheet-title{font-size:17px;font-weight:700;color:var(--t1)}
+.sheet-body{padding:18px 20px}
+
+/* ─── 周期选择 ─── */
+.period-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:18px}
+.period-btn{
+  background:var(--bg3);border:1.5px solid var(--border);
+  border-radius:var(--r-sm);padding:12px 8px;text-align:center;cursor:pointer;transition:all .18s;
+}
+.period-btn.on{border-color:var(--teal);background:var(--teal-bg)}
+.pd-days{font-size:15px;font-weight:700;color:var(--t1);margin-bottom:3px}
+.pd-rate{font-size:11px;color:var(--t3);margin-bottom:3px}
+.pd-boost{font-size:11px;font-weight:700;color:var(--teal)}
+
+/* ─── 收益预览格 ─── */
+.income-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-bottom:18px}
+.ib{background:var(--bg3);border-radius:var(--r-sm);padding:12px}
+.ib-l{font-size:11px;color:var(--t3);margin-bottom:5px}
+.ib-v{font-size:17px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--t1)}
+
+/* ─── 费用明细 ─── */
+.fee-bar{background:var(--gold-bg);border:1px solid rgba(240,165,0,.2);border-radius:var(--r-sm);padding:14px;margin-bottom:18px}
+
+/* ─── 输入框 ─── */
+.inp{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--r-sm);padding:12px 14px;
+  color:var(--t1);font-size:13px;margin-bottom:18px;
+  transition:border-color .18s;
+}
+.inp:focus{border-color:var(--teal)}
+.inp::placeholder{color:var(--t3)}
+
+/* ─── 算力环 ─── */
+.ring-wrap{display:flex;flex-direction:column;align-items:center;padding:20px 0 14px}
+.ring{position:relative;width:130px;height:130px}
+.ring svg{transform:rotate(-90deg)}
+.ring-bg{fill:none;stroke:var(--bg3);stroke-width:10}
+.ring-fill{fill:none;stroke:var(--teal);stroke-width:10;stroke-linecap:round;stroke-dasharray:351.9;stroke-dashoffset:351.9;transition:stroke-dashoffset .7s ease}
+.ring-center{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.ring-pct{font-size:24px;font-weight:800;font-family:'JetBrains Mono',monospace;color:var(--teal)}
+.ring-lbl{font-size:11px;color:var(--t3);margin-top:2px}
+
+/* ─── 团队代际卡 ─── */
+.gen-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r-sm);padding:14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;box-shadow:var(--shadow)}
+.gen-badge{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.gen-title{font-size:13px;font-weight:600;color:var(--t1)}
+.gen-sub{font-size:12px;color:var(--t2);margin-top:2px}
+.gen-boost{font-size:16px;font-weight:800;font-family:'JetBrains Mono',monospace}
+
+/* ─── 邀请区 ─── */
+.invite-card{background:var(--t1);border-radius:var(--r);padding:18px;margin-bottom:12px;position:relative;overflow:hidden}
+.invite-card-dot{position:absolute;border-radius:50%;background:rgba(0,184,151,.15);pointer-events:none}
+.invite-code{font-family:'JetBrains Mono',monospace;font-size:26px;font-weight:700;color:var(--teal);letter-spacing:4px;margin:8px 0}
+.invite-url{font-size:11px;color:rgba(255,255,255,.35);word-break:break-all;margin-bottom:14px}
+
+/* ─── 持仓矿机 ─── */
+.rent-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:10px;box-shadow:var(--shadow)}
+.rst{font-size:11px;font-weight:700;padding:4px 10px;border-radius:6px}
+.rst-run{background:var(--teal-bg);color:var(--teal)}
+.rst-warn{background:var(--gold-bg);color:var(--gold);animation:pulse .9s ease infinite}
+.rst-dead{background:var(--red-bg);color:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+
+.rent-prog-wrap{display:flex;align-items:center;gap:8px;margin:10px 0}
+.rent-prog-track{flex:1;height:3px;background:var(--bg3);border-radius:2px;overflow:hidden}
+.rent-prog-fill{height:100%;border-radius:2px;background:var(--teal)}
+
+/* ─── 菜单行 ─── */
+.menu-row{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;cursor:pointer;transition:background .15s}
+.menu-row:active{background:var(--bg3)}
+.menu-ico{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.menu-label{font-size:14px;font-weight:500;color:var(--t1)}
+.menu-arrow{color:var(--t3);font-size:18px}
+.menu-sep{height:1px;background:var(--border);margin:0 16px}
+
+/* ─── 通知 ─── */
+.toast{
+  position:fixed;top:calc(var(--sat)+56px);left:50%;
+  transform:translateX(-50%) translateY(-8px);
+  background:var(--t1);color:#fff;
+  border-radius:20px;padding:10px 20px;
+  font-size:13px;font-weight:600;z-index:999;
+  opacity:0;pointer-events:none;transition:all .25s;
+  white-space:nowrap;max-width:calc(100vw - 40px);text-align:center;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{background:var(--teal)}
+.toast.err{background:var(--red)}
+
+/* ─── 空状态 ─── */
+.empty{display:flex;flex-direction:column;align-items:center;padding:52px 24px;text-align:center;color:var(--t3)}
+.empty-ico{font-size:40px;margin-bottom:12px;opacity:.5}
+.empty-txt{font-size:14px;line-height:1.6}
+
+/* ─── 加载 ─── */
+.spin{display:inline-block;width:16px;height:16px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:spin .5s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ─── 数字统计行 ─── */
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--border);border-radius:var(--r-sm);overflow:hidden;margin-bottom:16px}
+.stat-item{background:var(--bg2);padding:14px 12px;text-align:center}
+.stat-val{font-size:18px;font-weight:800;font-family:'JetBrains Mono',monospace}
+.stat-lbl{font-size:11px;color:var(--t3);margin-top:4px}
+</style>
+</head>
+<body>
+<div id="app">
+<div class="safe-top"></div>
+
+<!-- 顶栏 -->
+<div class="topbar">
+  <div class="logo">Mine<span>Chain</span></div>
+  <div class="wallet-chip" id="wChip" onclick="connectWallet()">
+    <div class="wdot" id="wDot"></div>
+    <span id="wLabel">连接钱包</span>
+  </div>
+</div>
+
+<!-- 页面 -->
+<div class="pages">
+
+  <!-- ══ 市场 ══ -->
+  <div class="page active" id="pg-market">
+    <div class="inner">
+      <!-- 英雄卡 -->
+      <div class="hero" style="margin-top:14px">
+        <div class="hero-dot1"></div>
+        <div class="hero-dot2"></div>
+        <div class="hero-lbl">USDT 余额</div>
+        <div class="hero-num" id="hBal">— U</div>
+        <div class="hero-sub">今日收益 <b id="hToday">—</b> U &nbsp;·&nbsp; 待领取 <b style="color:rgba(255,215,100,.9)" id="hPending">—</b> U</div>
+        <div style="display:flex;gap:8px;margin-top:16px">
+          <button class="btn btn-primary btn-sm" style="flex:1;border-radius:8px" onclick="showPage('income')">查看收益</button>
+          <button class="btn btn-sm" style="flex:1;border-radius:8px;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)" onclick="showPage('team')">我的团队</button>
+        </div>
+      </div>
+
+      <div class="sec">矿机市场 <span class="sec-right">4 个档位</span></div>
+      <div id="minerList"></div>
+    </div>
+  </div>
+
+  <!-- ══ 收益 ══ -->
+  <div class="page" id="pg-income">
+    <div class="inner">
+      <div class="sec" style="margin-top:14px">收益总览</div>
+
+      <!-- 收益卡 -->
+      <div class="hero" style="text-align:center">
+        <div class="hero-dot1"></div>
+        <div class="hero-dot2"></div>
+        <div class="hero-lbl">累计挖矿收益</div>
+        <div class="hero-num" id="totalIncome">— U</div>
+        <div class="stat-row" style="margin-top:18px;background:rgba(255,255,255,.06)">
+          <div class="stat-item" style="background:transparent">
+            <div class="stat-val" style="color:#fff;font-size:16px" id="todayAmt">—</div>
+            <div class="stat-lbl" style="color:rgba(255,255,255,.4)">今日</div>
+          </div>
+          <div class="stat-item" style="background:transparent">
+            <div class="stat-val" style="color:rgba(255,200,60,.9);font-size:16px" id="pendingAmt">—</div>
+            <div class="stat-lbl" style="color:rgba(255,255,255,.4)">待领取</div>
+          </div>
+          <div class="stat-item" style="background:transparent">
+            <div class="stat-val" style="color:rgba(255,255,255,.5);font-size:16px" id="claimedAmt">—</div>
+            <div class="stat-lbl" style="color:rgba(255,255,255,.4)">已领取</div>
+          </div>
+        </div>
+        <button class="btn btn-primary" style="margin-top:16px;border-radius:10px" id="claimBtn" onclick="doClaim()">领取挖矿收益</button>
+      </div>
+
+      <div class="sec">我的矿机</div>
+      <div id="myRents">
+        <div class="empty"><div class="empty-ico">⛏</div><div class="empty-txt">暂无持仓矿机<br>去市场租一台开始挖矿</div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 团队 ══ -->
+  <div class="page" id="pg-team">
+    <div class="inner">
+      <div class="sec" style="margin-top:14px">邀请好友</div>
+
+      <div class="invite-card">
+        <div class="invite-card-dot" style="width:160px;height:160px;top:-50px;right:-50px"></div>
+        <div class="invite-card-dot" style="width:100px;height:100px;bottom:-30px;left:-20px;background:rgba(22,119,255,.1)"></div>
+        <div style="font-size:12px;color:rgba(255,255,255,.4);letter-spacing:.04em">我的邀请码</div>
+        <div class="invite-code" id="invCode">——</div>
+        <div class="invite-url" id="invUrl">连接钱包后获取专属邀请链接</div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-primary btn-sm" style="flex:1" onclick="copyInv()">复制链接</button>
+          <button class="btn btn-sm" style="flex:1;background:rgba(255,255,255,.1);color:#fff;border:1px solid rgba(255,255,255,.15)" onclick="shareInv()">分享</button>
+        </div>
+      </div>
+
+      <div class="sec">当前算力加成</div>
+      <div class="card">
+        <div class="ring-wrap">
+          <div class="ring">
+            <svg width="130" height="130" viewBox="0 0 130 130">
+              <circle class="ring-bg" cx="65" cy="65" r="56"/>
+              <circle class="ring-fill" id="ringFill" cx="65" cy="65" r="56"/>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-pct" id="ringPct">0%</div>
+              <div class="ring-lbl">算力加成</div>
+            </div>
+          </div>
+        </div>
+        <div class="mc-stats">
+          <div class="mc-stat" style="text-align:center">
+            <div class="mc-stat-l">一代加成</div>
+            <div class="mc-stat-v" style="color:var(--teal)" id="g1p">0%</div>
+          </div>
+          <div class="mc-stat" style="text-align:center">
+            <div class="mc-stat-l">二代加成</div>
+            <div class="mc-stat-v" style="color:var(--purple)" id="g2p">0%</div>
+          </div>
+          <div class="mc-stat" style="text-align:center">
+            <div class="mc-stat-l">三代加成</div>
+            <div class="mc-stat-v" style="color:var(--gold)" id="g3p">0%</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="sec">团队统计</div>
+      <div class="gen-card">
+        <div class="gen-badge" style="background:var(--teal-bg);color:var(--teal)">一代</div>
+        <div style="flex:1">
+          <div class="gen-title" id="g1c">0 人</div>
+          <div class="gen-sub" id="g1a">团队租机 0 U</div>
+        </div>
+        <div class="gen-boost" style="color:var(--teal)" id="g1b">+0%</div>
+      </div>
+      <div class="gen-card">
+        <div class="gen-badge" style="background:var(--purple-bg);color:var(--purple)">二代</div>
+        <div style="flex:1">
+          <div class="gen-title" id="g2c">0 人</div>
+          <div class="gen-sub" id="g2a">团队租机 0 U</div>
+        </div>
+        <div class="gen-boost" style="color:var(--purple)" id="g2b">+0%</div>
+      </div>
+      <div class="gen-card">
+        <div class="gen-badge" style="background:var(--gold-bg);color:var(--gold)">三代</div>
+        <div style="flex:1">
+          <div class="gen-title" id="g3c">0 人</div>
+          <div class="gen-sub" id="g3a">团队租机 0 U</div>
+        </div>
+        <div class="gen-boost" style="color:var(--gold)" id="g3b">+0%</div>
+      </div>
+
+      <div class="sec">直推奖励规则</div>
+      <div class="card card-sm">
+        <div style="font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:12px">
+          奖励比例由<span style="color:var(--t1);font-weight:600">你的最高矿机档位</span>决定，与下级购买的矿机无关。
+        </div>
+        <div class="drow"><span class="dl">⛏ 铁矿机用户</span><span class="dv teal">10%</span></div>
+        <div class="drow"><span class="dl">🥈 银矿机用户</span><span class="dv blue">20%</span></div>
+        <div class="drow"><span class="dl">🥇 金矿机用户</span><span class="dv gold">25%</span></div>
+        <div class="drow"><span class="dl">💎 钻石矿机用户</span><span class="dv purple">30%</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ 我的 ══ -->
+  <div class="page" id="pg-mine">
+    <div class="inner">
+      <div class="sec" style="margin-top:14px">账户</div>
+
+      <div class="hero" style="padding:18px">
+        <div class="hero-dot1"></div>
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          <div style="width:46px;height:46px;border-radius:50%;background:rgba(0,184,151,.2);display:flex;align-items:center;justify-content:center;font-size:20px;border:1px solid rgba(0,184,151,.3)">⛏</div>
+          <div>
+            <div style="font-size:15px;font-weight:700;color:#fff" id="myAddr">未连接钱包</div>
+            <div style="font-size:12px;color:rgba(255,255,255,.4)">BNB Chain</div>
+          </div>
+        </div>
+        <div class="drow" style="border-color:rgba(255,255,255,.08)"><span class="dl" style="color:rgba(255,255,255,.4)">USDT 余额</span><span class="dv teal" id="myBal">—</span></div>
+        <div class="drow" style="border-color:rgba(255,255,255,.08)"><span class="dl" style="color:rgba(255,255,255,.4)">运行中矿机</span><span class="dv" style="color:#fff" id="myMC">—</span></div>
+        <div class="drow" style="border:none"><span class="dl" style="color:rgba(255,255,255,.4)">最高矿机档位</span><span class="dv" style="color:#fff" id="myTop">—</span></div>
+      </div>
+
+      <div class="sec">功能</div>
+      <div class="card" style="padding:0;overflow:hidden">
+        <div class="menu-row" onclick="showPage('income')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="menu-ico" style="background:var(--teal-bg)">💰</div>
+            <span class="menu-label">我的收益</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-row" onclick="showPage('team')">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="menu-ico" style="background:var(--purple-bg)">👥</div>
+            <span class="menu-label">我的团队</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-row" onclick="copyAddr()">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="menu-ico" style="background:var(--blue-bg)">📋</div>
+            <span class="menu-label">复制钱包地址</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+        <div class="menu-sep"></div>
+        <div class="menu-row" onclick="connectWallet()">
+          <div style="display:flex;align-items:center;gap:12px">
+            <div class="menu-ico" style="background:var(--teal-bg)">🔗</div>
+            <span class="menu-label">切换钱包</span>
+          </div>
+          <span class="menu-arrow">›</span>
+        </div>
+      </div>
+
+      <div class="sec">关于</div>
+      <div class="card card-sm">
+        <div class="drow"><span class="dl">合约网络</span><span class="dv">BNB Chain (56)</span></div>
+        <div class="drow"><span class="dl">结算代币</span><span class="dv">USDT (BEP-20)</span></div>
+        <div class="drow"><span class="dl">续租手续费</span><span class="dv teal">8%</span></div>
+        <div class="drow"><span class="dl">算力上限</span><span class="dv teal">300%</span></div>
+        <div class="drow"><span class="dl">白皮书</span><span class="dv teal" style="cursor:pointer">查看 ›</span></div>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /pages -->
+
+<!-- 底部导航 -->
+<nav class="nav">
+  <button class="ni active" data-p="market" onclick="showPage('market')">
+    <div class="ni-icon"><svg viewBox="0 0 24 24"><rect x="2" y="2" width="9" height="9" rx="2"/><rect x="13" y="2" width="9" height="9" rx="2"/><rect x="2" y="13" width="9" height="9" rx="2"/><rect x="13" y="13" width="9" height="9" rx="2"/></svg></div>
+    市场
+  </button>
+  <button class="ni" data-p="income" onclick="showPage('income')">
+    <div class="ni-icon"><svg viewBox="0 0 24 24"><polyline points="22 6 13 15 8 10 2 16"/><polyline points="16 6 22 6 22 12"/></svg></div>
+    收益
+  </button>
+  <button class="ni" data-p="team" onclick="showPage('team')">
+    <div class="ni-icon"><svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+    团队
+  </button>
+  <button class="ni" data-p="mine" onclick="showPage('mine')">
+    <div class="ni-icon"><svg viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
+    我的
+  </button>
+</nav>
+</div>
+
+<!-- ══ 购买弹窗 ══ -->
+<div class="overlay" id="buyOv">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title" id="buyTitle">租矿机</div></div>
+    <div class="sheet-body">
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">选择租期</div>
+      <div class="period-grid" id="periodGrid"></div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">收益预览</div>
+      <div class="income-grid" id="incomePrev"></div>
+      <div class="fee-bar">
+        <div class="drow"><span class="dl" style="font-size:12px">租金</span><span class="dv" id="mPrice" style="font-size:13px">—</span></div>
+        <div class="drow"><span class="dl" style="font-size:12px">手续费 (8%)</span><span class="dv red" id="mFee" style="font-size:13px">—</span></div>
+        <div class="drow" style="border:none"><span class="dl" style="font-size:12px">到期退还押金 (92%)</span><span class="dv teal" id="mDeposit" style="font-size:13px">—</span></div>
+      </div>
+      <div style="font-size:12px;color:var(--t3);margin-bottom:8px;font-weight:600;letter-spacing:.04em;text-transform:uppercase">邀请人地址（可选）</div>
+      <input class="inp" id="refInput" placeholder="输入邀请人钱包地址 0x...">
+      <button class="btn btn-primary" id="buyConfirm" onclick="confirmRent()">确认租机</button>
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="closeOv('buyOv')">取消</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══ 续租弹窗 ══ -->
+<div class="overlay" id="renewOv">
+  <div class="sheet">
+    <div class="sheet-handle"></div>
+    <div class="sheet-head"><div class="sheet-title">续租矿机</div></div>
+    <div class="sheet-body">
+      <div class="card card-sm" style="margin-bottom:16px">
+        <div class="drow"><span class="dl">矿机</span><span class="dv" id="rMiner">—</span></div>
+        <div class="drow"><span class="dl">续租周期</span><span class="dv" id="rPeriod">—</span></div>
+        <div class="drow" style="border:none"><span class="dl">续租费用 (8%)</span><span class="dv gold" id="rFee">—</span></div>
+      </div>
+      <div style="background:var(--teal-bg);border:1px solid rgba(0,184,151,.2);border-radius:var(--r-sm);padding:14px;font-size:13px;color:var(--t2);line-height:1.7;margin-bottom:18px">
+        ✅ 续租后 92% 押金继续留在池子，算力无缝续接，团队贡献持续累积。
+      </div>
+      <button class="btn btn-primary" id="renewConfirm" onclick="confirmRenew()">确认续租</button>
+      <button class="btn btn-ghost" style="margin-top:8px" onclick="closeOv('renewOv')">取消</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const CFG={CONTRACT:"0xYOUR_CONTRACT_ADDRESS",USDT:"0x55d398326f99059fF775485246999027B3197955",API:"https://your-backend.com",CHAIN_ID:56};
+const MINERS=[
+  {t:0,name:"铁矿机",emoji:"⛏",cls:"iron",  color:"var(--c-iron)",  ico:"#EEF0F5",price:100, daily:.008,ref:.10,supply:"不限量"},
+  {t:1,name:"银矿机",emoji:"🥈",cls:"silver",color:"var(--c-silver)",ico:"#EAF2FF",price:500, daily:.009,ref:.20,supply:"不限量"},
+  {t:2,name:"金矿机",emoji:"🥇",cls:"golden",color:"var(--c-gold)",  ico:"#FFF8E6",price:2000,daily:.010,ref:.25,supply:"限量2,000台"},
+  {t:3,name:"钻石矿机",emoji:"💎",cls:"diamond",color:"var(--c-diamond)",ico:"#F0ECFF",price:5000,daily:.012,ref:.30,supply:"限量500台"},
+];
+const PERIODS=[{i:0,label:"30天",days:30,boost:1.0,tag:"基础"},{i:1,label:"90天",days:90,boost:1.3,tag:"+30%"},{i:2,label:"180天",days:180,boost:1.8,tag:"+80%"}];
+
+let W={ok:false,addr:""},C=null,UC=null,curM=null,curP=1,curRI=null,myRents=[];
+const fmtU=(v,d=2)=>(Number(BigInt(v||0))/1e6).toFixed(d);
+const fmtA=(a)=>a?a.slice(0,6)+"..."+a.slice(-4):"";
+const ts=()=>Math.floor(Date.now()/1000);
+
+function toast(msg,type="ok",ms=2500){const el=document.getElementById("toast");el.textContent=msg;el.className="toast show "+type;setTimeout(()=>el.className="toast",ms);}
+function showPage(n){
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.querySelectorAll(".ni").forEach(b=>b.classList.toggle("active",b.dataset.p===n));
+  document.getElementById("pg-"+n).classList.add("active");
+  if(n==="income"&&W.ok)loadIncome();
+  if(n==="team"  &&W.ok)loadTeam();
+  if(n==="mine"  &&W.ok)loadMine();
+}
+function openOv(id){document.getElementById(id).classList.add("show")}
+function closeOv(id){document.getElementById(id).classList.remove("show")}
+
+// 兼容所有主流钱包：Bitget / OKX / TokenPocket / imToken / MetaMask
+function getProvider(){
+  // Bitget 钱包多种注入方式
+  if(window.bitkeep?.ethereum)  return window.bitkeep.ethereum;
+  if(window.bitkeepEthereum)    return window.bitkeepEthereum;
+  if(window.isBitKeep && window.ethereum) return window.ethereum;
+  // OKX 钱包
+  if(window.okxwallet)          return window.okxwallet;
+  if(window.okexchain)          return window.okexchain;
+  // Trust Wallet
+  if(window.trustwallet)        return window.trustwallet;
+  // 标准注入
+  if(window.ethereum)           return window.ethereum;
+  // 兜底：检查 web3
+  if(window.web3?.currentProvider) return window.web3.currentProvider;
+  return null;
+}
+
+async function connectWallet(){
+  try{
+    // 调试信息
+    const dbg = {
+      bitkeep: !!window.bitkeep,
+      bitkeepEth: !!window.bitkeep?.ethereum,
+      okx: !!window.okxwallet,
+      ethereum: !!window.ethereum,
+      isBitKeep: !!window.isBitKeep,
+      trust: !!window.trustwallet,
+      web3: !!window.web3,
+      ua: navigator.userAgent.slice(0,60),
+    };
+    console.log("钱包检测:", JSON.stringify(dbg));
+
+    const raw = getProvider();
+    if(!raw){
+      // 显示详细错误帮助调试
+      const detail = Object.entries(dbg).map(([k,v])=>k+":"+v).join(" | ");
+      toast("未检测到钱包注入 | "+detail,"err",6000);
+      return;
+    }
+    toast("检测到钱包，连接中...","ok",2000);
+    const prov = new ethers.BrowserProvider(raw);
+    const accs = await prov.send("eth_requestAccounts",[]);
+    if(!accs.length) return;
+    const net = await prov.getNetwork();
+    if(Number(net.chainId)!==CFG.CHAIN_ID){
+      toast("正在切换到 BNB Chain...","ok");
+      try{
+        await raw.request({method:"wallet_switchEthereumChain",params:[{chainId:"0x38"}]});
+        setTimeout(()=>connectWallet(),800);
+      }catch(e){
+        try{
+          await raw.request({method:"wallet_addEthereumChain",params:[{
+            chainId:"0x38",chainName:"BNB Smart Chain",
+            nativeCurrency:{name:"BNB",symbol:"BNB",decimals:18},
+            rpcUrls:["https://bsc-dataseed.binance.org/"],
+            blockExplorerUrls:["https://bscscan.com"],
+          }]});
+          setTimeout(()=>connectWallet(),800);
+        }catch(e2){ toast("请手动切换到 BNB Chain","err"); }
+      }
+      return;
+    }
+    const sgn=await prov.getSigner();
+
+    // 签名验证：让用户明确确认连接
+    toast("请在钱包中确认签名...","ok",3000);
+    const signMsg = `欢迎使用 MineChain！
+
+请签名确认您的身份，此操作不会产生任何费用，也不会转移您的资产。
+
+地址：${accs[0]}
+时间：${new Date().toLocaleString()}
+Nonce：${Date.now()}`;
+    try{
+      const signature = await sgn.signMessage(signMsg);
+      if(!signature){ toast("签名已取消","err"); return; }
+    }catch(e){
+      if(e.code===4001 || e.message?.includes("reject") || e.message?.includes("cancel") || e.message?.includes("denied")){
+        toast("已取消连接","err"); return;
+      }
+      // 签名失败不影响连接（部分钱包限制）
+      console.warn("签名失败:",e.message);
+    }
+
+    W={ok:true,addr:accs[0],provider:prov,signer:sgn};
+    const ABI=["function rent(uint8,uint8,address) external","function renew(uint256) external","function withdraw(uint256) external","function claim(uint256,bytes32[]) external","function getRentCount(address) view returns(uint256)","function getRent(address,uint256) view returns(tuple(uint8,uint8,uint256,uint256,uint256,uint256,uint256,bool,bool))","function userInfo(address) view returns(address,address,address,uint8,bool,bool,uint256,uint256,uint256,uint256,uint256,uint256)","function calcPowerBoostBps(address) view returns(uint256,uint256,uint256,uint256)","function claimedAmount(address) view returns(uint256)"];
+    const UABI=["function balanceOf(address) view returns(uint256)","function approve(address,uint256) returns(bool)","function allowance(address,address) view returns(uint256)"];
+    C=new ethers.Contract(CFG.CONTRACT,ABI,sgn);
+    UC=new ethers.Contract(CFG.USDT,UABI,sgn);
+    document.getElementById("wDot").classList.add("on");
+    document.getElementById("wLabel").textContent=fmtA(W.addr);
+    const code=W.addr.slice(2,8).toUpperCase();
+    document.getElementById("invCode").textContent=code;
+    document.getElementById("invUrl").textContent=`https://minechain.app/ref/${code}`;
+    document.getElementById("myAddr").textContent=fmtA(W.addr);
+    loadMarket();toast("钱包已连接 ✓");
+  }catch(e){toast(e.message||"连接失败","err");}
+}
+
+async function loadMarket(){
+  if(W.ok){
+    try{const b=await UC.balanceOf(W.addr);document.getElementById("hBal").textContent=fmtU(b)+" U";}catch(e){}
+    try{const r=await fetch(CFG.API+"/claim-info/"+W.addr);const d=await r.json();window._cd=d;const p=(Number(d.pending||0)/1e6).toFixed(2);document.getElementById("hToday").textContent=p;document.getElementById("hPending").textContent=p;}catch(e){}
+  }
+  renderMiners();
+}
+
+function renderMiners(){
+  const list=document.getElementById("minerList");list.innerHTML="";
+  MINERS.forEach(m=>{
+    const pct=m.t<=1?Math.floor(Math.random()*35+15):m.t===2?Math.floor(Math.random()*55+20):Math.floor(Math.random()*70+15);
+    const maxD=(m.price*m.daily*1.8*4).toFixed(1);
+    const el=document.createElement("div");
+    el.className="mc "+m.cls;el.onclick=()=>openBuy(m);
+    el.innerHTML=`
+      <div class="mc-head">
+        <div class="mc-left">
+          <div class="mc-ico" style="background:${m.ico}">${m.emoji}</div>
+          <div>
+            <div class="mc-name">${m.name}
+              ${m.t===2?'<span class="tag tag-hot" style="margin-left:6px;font-size:10px;vertical-align:2px">限量</span>':''}
+              ${m.t===3?'<span class="tag tag-rare" style="margin-left:6px;font-size:10px;vertical-align:2px">稀缺</span>':''}
+            </div>
+            <div class="mc-supply">${m.supply}</div>
+          </div>
+        </div>
+        <div>
+          <div class="mc-price-num" style="color:${m.color}">${m.price.toLocaleString()}</div>
+          <div class="mc-price-unit">USDT</div>
+        </div>
+      </div>
+      <div class="mc-stats">
+        <div class="mc-stat"><div class="mc-stat-l">基础日化</div><div class="mc-stat-v" style="color:var(--teal)">${(m.daily*100).toFixed(1)}%</div></div>
+        <div class="mc-stat"><div class="mc-stat-l">直推奖励</div><div class="mc-stat-v" style="color:var(--gold)">${(m.ref*100).toFixed(0)}%</div></div>
+        <div class="mc-stat"><div class="mc-stat-l">最高日产</div><div class="mc-stat-v">${maxD} U</div></div>
+      </div>
+      <div class="mc-bar-wrap">
+        <div class="mc-bar-track"><div class="mc-bar-fill" style="width:${pct}%;background:${m.color}"></div></div>
+        <div class="mc-bar-txt">已售${pct}%</div>
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+function openBuy(m){
+  if(!W.ok){toast("请先连接钱包","err");connectWallet();return;}
+  curM=m;curP=1;
+  document.getElementById("buyTitle").textContent=`租 ${m.emoji} ${m.name}`;
+  renderPeriods();renderPreview();updateFees();
+  document.getElementById("refInput").value="";
+  openOv("buyOv");
+}
+
+function renderPeriods(){
+  const g=document.getElementById("periodGrid");g.innerHTML="";
+  PERIODS.forEach(p=>{
+    const r=(curM.daily*p.boost*100).toFixed(2);
+    const el=document.createElement("div");
+    el.className="period-btn"+(p.i===curP?" on":"");
+    el.onclick=()=>{curP=p.i;renderPeriods();renderPreview();updateFees();};
+    el.innerHTML=`<div class="pd-days">${p.label}</div><div class="pd-rate">${r}%/天</div><div class="pd-boost">${p.tag}</div>`;
+    g.appendChild(el);
+  });
+}
+
+function renderPreview(){
+  const m=curM,p=PERIODS[curP];
+  const daily=m.price*m.daily*p.boost;const total=daily*p.days;const roi=Math.ceil(m.price/daily);
+  document.getElementById("incomePrev").innerHTML=`
+    <div class="ib"><div class="ib-l">每日产出</div><div class="ib-v" style="color:var(--teal)">${daily.toFixed(2)}<span style="font-size:12px;color:var(--t3)"> U</span></div></div>
+    <div class="ib"><div class="ib-l">${p.days}天收益</div><div class="ib-v">${total.toFixed(1)}<span style="font-size:12px;color:var(--t3)"> U</span></div></div>
+    <div class="ib"><div class="ib-l">直推奖励/人</div><div class="ib-v" style="color:var(--gold)">${(m.price*m.ref).toFixed(0)}<span style="font-size:12px;color:var(--t3)"> U</span></div></div>
+    <div class="ib"><div class="ib-l">回本天数</div><div class="ib-v" style="color:var(--t2)">${roi}<span style="font-size:12px;color:var(--t3)"> 天</span></div></div>`;
+}
+
+function updateFees(){
+  const m=curM;
+  document.getElementById("mPrice").textContent=m.price.toLocaleString()+" USDT";
+  document.getElementById("mFee").textContent="-"+(m.price*.08).toFixed(0)+" USDT";
+  document.getElementById("mDeposit").textContent="+"+(m.price*.92).toFixed(0)+" USDT";
+}
+
+async function confirmRent(){
+  const ref=document.getElementById("refInput").value.trim()||ethers.ZeroAddress;
+  const btn=document.getElementById("buyConfirm");
+  try{
+    btn.innerHTML='<span class="spin"></span> 授权中...';btn.disabled=true;
+    const amt=BigInt(curM.price)*BigInt(1e6);
+    const al=await UC.allowance(W.addr,CFG.CONTRACT);
+    if(al<amt){const tx=await UC.approve(CFG.CONTRACT,ethers.MaxUint256);await tx.wait();}
+    btn.innerHTML='<span class="spin"></span> 租机中...';
+    const tx=await C.rent(curM.t,curP,ref);
+    toast("交易已提交...");await tx.wait();
+    toast(`🎉 ${curM.name} 租机成功！`,"ok",3000);
+    closeOv("buyOv");loadMarket();loadIncome();
+  }catch(e){toast(e.reason||e.message||"失败","err",3000);}
+  finally{btn.innerHTML="确认租机";btn.disabled=false;}
+}
+
+async function loadIncome(){
+  if(!W.ok)return;
+  try{
+    const r=await fetch(CFG.API+"/claim-info/"+W.addr);const d=await r.json();window._cd=d;
+    document.getElementById("totalIncome").textContent=(Number(d.totalClaimable||0)/1e6).toFixed(2)+" U";
+    document.getElementById("pendingAmt").textContent=(Number(d.pending||0)/1e6).toFixed(2);
+    document.getElementById("claimedAmt").textContent=(Number(d.alreadyClaimed||0)/1e6).toFixed(2);
+    document.getElementById("todayAmt").textContent=(Number(d.pending||0)/1e6).toFixed(2);
+  }catch(e){}
+  await loadRents();
+}
+
+async function loadRents(){
+  if(!W.ok)return;
+  try{const r=await fetch(CFG.API+"/user/"+W.addr+"/rents");const d=await r.json();myRents=d.rents||[];}
+  catch(e){
+    try{
+      const cnt=await C.getRentCount(W.addr);myRents=[];
+      for(let i=0;i<cnt;i++){const rec=await C.getRent(W.addr,i);myRents.push({index:i,minerType:Number(rec[0]),periodIndex:Number(rec[1]),rentAmount:rec[2].toString(),deposit:rec[3].toString(),expireTime:Number(rec[5]),renewDeadline:Number(rec[6]),active:rec[7],withdrawn:rec[8]});}
+    }catch(e2){}
+  }
+  renderRents();
+}
+
+function renderRents(){
+  const list=document.getElementById("myRents");
+  const active=myRents.filter(r=>r.active&&!r.withdrawn);
+  if(!active.length){list.innerHTML='<div class="empty"><div class="empty-ico">⛏</div><div class="empty-txt">暂无持仓矿机<br>去市场租一台开始挖矿</div></div>';return;}
+  list.innerHTML="";
+  active.forEach(r=>{
+    const m=MINERS[r.minerType],p=PERIODS[r.periodIndex];
+    const now=ts();const start=r.expireTime-p.days*86400;
+    const prog=Math.min(100,Math.max(0,Math.round((now-start)/(p.days*86400)*100)));
+    const expired=now>=r.expireTime;const inWin=expired&&now<=r.renewDeadline;const dead=now>r.renewDeadline;
+    const hLeft=inWin?Math.ceil((r.renewDeadline-now)/3600):0;
+    let stCls,stTxt;
+    if(dead){stCls="rst-dead";stTxt="⚠️ 算力已清零";}
+    else if(inWin){stCls="rst-warn";stTxt=`续租窗口 ${hLeft}h`;}
+    else{stCls="rst-run";stTxt="运行中";}
+    const daily=(Number(r.rentAmount)/1e6*m.daily*p.boost).toFixed(2);
+    const el=document.createElement("div");el.className="rent-card";
+    el.innerHTML=`
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:10px;background:${m.ico};display:flex;align-items:center;justify-content:center;font-size:18px">${m.emoji}</div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--t1)">${m.name}</div>
+            <div style="font-size:12px;color:var(--t3)">${p.label} · 日产 ${daily} U</div>
+          </div>
+        </div>
+        <div class="rst ${stCls}">${stTxt}</div>
+      </div>
+      <div class="rent-prog-wrap">
+        <div class="rent-prog-track"><div class="rent-prog-fill" style="width:${prog}%"></div></div>
+        <span style="font-size:11px;color:var(--t3)">${prog}%</span>
+      </div>
+      <div style="display:flex;gap:8px">
+        ${(inWin||!expired)?`<button class="btn btn-primary btn-sm" style="flex:1;font-size:12px" onclick="openRenew(${r.index})">续租 (${(Number(r.rentAmount)/1e6*.08).toFixed(0)}U)</button>`:""}
+        ${expired?`<button class="btn btn-ghost btn-sm" style="flex:1;font-size:12px" onclick="doWithdraw(${r.index})">退还押金</button>`:""}
+      </div>`;
+    list.appendChild(el);
+  });
+}
+
+async function doClaim(){
+  if(!window._cd?.proof?.length){toast("暂无可领取收益","err");return;}
+  const btn=document.getElementById("claimBtn");
+  try{btn.innerHTML='<span class="spin"></span> 领取中...';btn.disabled=true;const tx=await C.claim(BigInt(window._cd.totalClaimable),window._cd.proof);toast("交易已提交...");await tx.wait();toast("🎉 收益已到账！","ok",3000);loadIncome();}
+  catch(e){toast(e.reason||"领取失败","err");}
+  finally{btn.innerHTML="领取挖矿收益";btn.disabled=false;}
+}
+
+async function doWithdraw(idx){
+  try{toast("退还押金中...");const tx=await C.withdraw(idx);await tx.wait();toast("✅ 押金已退还");loadIncome();}
+  catch(e){toast(e.reason||"失败","err");}
+}
+
+function openRenew(idx){
+  const r=myRents.find(x=>x.index===idx);if(!r)return;curRI=idx;
+  const m=MINERS[r.minerType],p=PERIODS[r.periodIndex];
+  document.getElementById("rMiner").textContent=m.emoji+" "+m.name;
+  document.getElementById("rPeriod").textContent=p.label+" ("+p.tag+")";
+  document.getElementById("rFee").textContent=(Number(r.rentAmount)/1e6*.08).toFixed(2)+" USDT";
+  openOv("renewOv");
+}
+
+async function confirmRenew(){
+  const btn=document.getElementById("renewConfirm");
+  try{
+    btn.innerHTML='<span class="spin"></span> 续租中...';btn.disabled=true;
+    const r=myRents.find(x=>x.index===curRI);const fee=BigInt(r.rentAmount)*8n/100n;
+    const al=await UC.allowance(W.addr,CFG.CONTRACT);
+    if(al<fee){const tx=await UC.approve(CFG.CONTRACT,ethers.MaxUint256);await tx.wait();}
+    const tx=await C.renew(curRI);toast("续租中...");await tx.wait();
+    toast("✅ 续租成功！算力继续","ok",3000);closeOv("renewOv");loadIncome();
+  }catch(e){toast(e.reason||"失败","err");}
+  finally{btn.innerHTML="确认续租";btn.disabled=false;}
+}
+
+async function loadTeam(){
+  if(!W.ok)return;
+  try{
+    const r=await fetch(CFG.API+"/user/"+W.addr+"/power");const d=await r.json();
+    const tot=parseFloat(d.totalBoost||"0");setRing(tot);
+    document.getElementById("g1p").textContent=d.gen1?.boost||"0%";
+    document.getElementById("g2p").textContent=d.gen2?.boost||"0%";
+    document.getElementById("g3p").textContent=d.gen3?.boost||"0%";
+  }catch(e){
+    try{const[g1,g2,g3,tot]=await C.calcPowerBoostBps(W.addr);setRing(Number(tot)/100);document.getElementById("g1p").textContent=(Number(g1)/100).toFixed(0)+"%";document.getElementById("g2p").textContent=(Number(g2)/100).toFixed(0)+"%";document.getElementById("g3p").textContent=(Number(g3)/100).toFixed(0)+"%";}catch(e2){}
+  }
+  try{
+    const info=await C.userInfo(W.addr);
+    document.getElementById("g1a").textContent=`团队租机 ${(Number(info[9])/1e6).toFixed(0)} U`;
+    document.getElementById("g2a").textContent=`团队租机 ${(Number(info[10])/1e6).toFixed(0)} U`;
+    document.getElementById("g3a").textContent=`团队租机 ${(Number(info[11])/1e6).toFixed(0)} U`;
+  }catch(e){}
+}
+
+function setRing(pct){pct=Math.min(pct,300);const c=2*Math.PI*56;document.getElementById("ringFill").style.strokeDashoffset=c*(1-pct/300);document.getElementById("ringPct").textContent=pct.toFixed(0)+"%";}
+
+async function loadMine(){
+  if(!W.ok)return;
+  try{const b=await UC.balanceOf(W.addr);document.getElementById("myBal").textContent=fmtU(b)+" USDT";}catch(e){}
+  document.getElementById("myMC").textContent=myRents.filter(r=>r.active&&!r.withdrawn).length+" 台运行中";
+  try{const info=await C.userInfo(W.addr);const tops=["⛏ 铁矿机","🥈 银矿机","🥇 金矿机","💎 钻石矿机"];document.getElementById("myTop").textContent=tops[Number(info[3])]||"—";}catch(e){}
+}
+
+function copyInv(){const u=document.getElementById("invUrl").textContent;navigator.clipboard?.writeText(u).then(()=>toast("链接已复制 ✓"));}
+function shareInv(){const u=document.getElementById("invUrl").textContent;if(navigator.share)navigator.share({title:"MineChain",text:"加入 MineChain 云算力挖矿！",url:u});else copyInv();}
+function copyAddr(){if(!W.addr)return;navigator.clipboard?.writeText(W.addr).then(()=>toast("地址已复制"));}
+
+window.addEventListener("DOMContentLoaded",()=>{
+  renderMiners();
+  // 自动检测已连接的钱包
+  const _p = getProvider();
+  if(_p?.selectedAddress || _p?.accounts?.[0]) connectWallet();
+  if(_p){
+    _p.on("accountsChanged",([a])=>{if(a)connectWallet();});
+    _p.on("chainChanged",()=>location.reload());
+  }
+});
+</script>
+</body>
+</html>
